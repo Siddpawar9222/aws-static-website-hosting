@@ -1,0 +1,90 @@
+name: Deploy React Frontend to AWS S3 & CloudFront
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+# Essential for AWS OIDC authentication
+permissions:
+  id-token: write # Required to request the OIDC JWT token
+  contents: read  # Required to checkout code
+
+concurrency:
+  group: frontend-deployment
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests (if configured)
+        run: npm test -- --watchAll=false --passWithNoTests
+        continue-on-error: true
+
+      - name: Build React Application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      # Authenticate to AWS via OIDC (No long-lived access keys!)
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          role-session-name: GitHubActions-FrontendDeploy
+
+      # Sync static files to S3 bucket
+      - name: Sync Static Files to S3
+        run: |
+          # Detect whether build output directory is 'dist' (Vite) or 'build' (CRA)
+          BUILD_DIR="dist"
+          if [ ! -d "$BUILD_DIR" ] && [ -d "build" ]; then
+            BUILD_DIR="build"
+          fi
+          
+          echo "Deploying from folder: $BUILD_DIR to S3 bucket: ${{ vars.S3_BUCKET_NAME }}"
+          
+          # Sync hashed assets with 1-year immutable cache header
+          aws s3 sync "$BUILD_DIR" "s3://${{ vars.S3_BUCKET_NAME }}" \
+            --delete \
+            --exclude "*.html" \
+            --cache-control "public, max-age=31536000, immutable"
+
+          # Sync HTML files with no-cache headers so entrypoints are always fresh
+          aws s3 sync "$BUILD_DIR" "s3://${{ vars.S3_BUCKET_NAME }}" \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "public, max-age=0, must-revalidate"
+
+      # Invalidate CloudFront edge cache so users get updated version instantly
+      - name: Invalidate CloudFront Cache
+        run: |
+          echo "Creating CloudFront cache invalidation for distribution: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
+
