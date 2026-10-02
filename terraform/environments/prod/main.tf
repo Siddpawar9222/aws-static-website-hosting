@@ -66,3 +66,4 @@ module "oidc" {
   create_oidc_provider        = var.create_oidc_provider
   tags                        = var.tags
 }
+
