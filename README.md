@@ -75,7 +75,7 @@ GitHub Actions Runner
 │       ├── frontend-deploy.yml    # CI/CD: Builds React, uploads to S3, invalidates CloudFront
 │       └── terraform-infra.yml    # CI/CD: Terraform plan & apply on infrastructure changes
 ├── terraform/
-│   ├── bootstrap/                 # State Backend setup (S3 + DynamoDB locking)
+│   ├── bootstrap/                 # State Backend setup (S3 State Bucket with Native S3 Locking)
 │   │   ├── main.tf
 │   │   ├── outputs.tf
 │   │   ├── providers.tf
@@ -83,7 +83,7 @@ GitHub Actions Runner
 │   │   └── variables.tf
 │   ├── environments/
 │   │   └── prod/                  # Production Environment Composition
-│   │       ├── backend.tf
+│   │       ├── backend.tf         # S3 backend with use_lockfile = true
 │   │       ├── main.tf
 │   │       ├── outputs.tf
 │   │       ├── providers.tf
@@ -139,7 +139,7 @@ terraform apply
 ### Step 5: Configure GitHub Secrets & Variables
 In your GitHub repository, go to **Settings** -> **Secrets and variables** -> **Actions** -> **Variables**:
 - `AWS_ROLE_ARN`: Value from Terraform output `github_actions_role_arn`
-- `AWS_REGION`: `us-east-1`
+- `AWS_REGION`: `ap-south-1` (or your chosen region)
 - `S3_BUCKET_NAME`: Value from Terraform output `s3_bucket_name`
 - `CLOUDFRONT_DISTRIBUTION_ID`: Value from Terraform output `cloudfront_distribution_id`
 
@@ -162,4 +162,3 @@ terraform destroy -auto-approve
 cd ../../terraform/bootstrap
 terraform destroy -auto-approve
 ```
-

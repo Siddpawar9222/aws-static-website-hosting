@@ -1,21 +1,23 @@
 # ------------------------------------------------------------------------------
-# 1. Route 53 Public Hosted Zone & DNS Records
+# Phase 2 — Full Infrastructure Stack
+#
+# Prerequisites:
+#   1. Phase 1 (environments/prod/dns) has been applied.
+#   2. Bigrock NS records have been updated with the 4 name servers from Phase 1.
+#   3. DNS propagation is complete (verify: dig NS <your-domain>).
 # ------------------------------------------------------------------------------
-module "route53" {
-  source = "../../modules/route53"
 
-  domain_name               = var.domain_name
-  cloudfront_domain_name    = module.cloudfront.distribution_domain_name
-  cloudfront_hosted_zone_id = module.cloudfront.distribution_hosted_zone_id
-  create_records            = true
-  tags                      = var.tags
+# Look up the hosted zone created in Phase 1 — no hardcoded IDs needed
+data "aws_route53_zone" "this" {
+  name         = var.domain_name
+  private_zone = false
 }
 
 # ------------------------------------------------------------------------------
-# 2. ACM SSL/TLS Certificate with Route 53 DNS Validation (Must be in us-east-1)
+# 1. ACM SSL/TLS Certificate with Route 53 DNS Validation (must be in us-east-1)
 # ------------------------------------------------------------------------------
 module "acm" {
-  source = "../../modules/acm"
+  source = "../../../modules/acm"
 
   providers = {
     aws = aws.us_east_1
@@ -23,29 +25,29 @@ module "acm" {
 
   domain_name               = var.domain_name
   subject_alternative_names = ["www.${var.domain_name}"]
-  route53_zone_id           = module.route53.zone_id
+  route53_zone_id           = data.aws_route53_zone.this.zone_id
   tags                      = var.tags
 }
 
 # ------------------------------------------------------------------------------
-# 3. Private S3 Bucket for React Static Website
+# 2. Private S3 Bucket for React Static Website
 # ------------------------------------------------------------------------------
 module "s3" {
-  source = "../../modules/s3"
+  source = "../../../modules/s3"
 
-  # S3 bucket names must be lowercase, alphanumeric and dashes only
   bucket_name                 = "${replace(var.domain_name, ".", "-")}-${var.environment}-site"
   cloudfront_distribution_arn = module.cloudfront.distribution_arn
   tags                        = var.tags
 }
 
 # ------------------------------------------------------------------------------
-# 4. CloudFront CDN Distribution with OAC and SPA Custom Error Responses
+# 3. CloudFront CDN Distribution with OAC, SPA Routing & DNS Alias Records
 # ------------------------------------------------------------------------------
 module "cloudfront" {
-  source = "../../modules/cloudfront"
+  source = "../../../modules/cloudfront"
 
   domain_name                    = var.domain_name
+  route53_zone_id                = data.aws_route53_zone.this.zone_id
   s3_bucket_id                   = module.s3.bucket_id
   s3_bucket_regional_domain_name = module.s3.bucket_regional_domain_name
   acm_certificate_arn            = module.acm.certificate_arn
@@ -53,10 +55,10 @@ module "cloudfront" {
 }
 
 # ------------------------------------------------------------------------------
-# 5. AWS IAM OIDC Role for GitHub Actions CI/CD (No Static Keys)
+# 4. AWS IAM OIDC Role for GitHub Actions CI/CD (No Static Keys)
 # ------------------------------------------------------------------------------
 module "oidc" {
-  source = "../../modules/oidc"
+  source = "../../../modules/oidc"
 
   github_org                  = var.github_org
   github_repo                 = var.github_repo

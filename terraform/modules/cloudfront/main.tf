@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
+  }
+}
+
 locals {
   s3_origin_id = "S3-${var.s3_bucket_id}"
 }
@@ -26,12 +37,12 @@ resource "aws_cloudfront_distribution" "this" {
 
   origin {
     domain_name              = var.s3_bucket_regional_domain_name
-    origin_id                = locals.s3_origin_id
+    origin_id                = local.s3_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.this.id
   }
 
   default_cache_behavior {
-    target_origin_id       = locals.s3_origin_id
+    target_origin_id       = local.s3_origin_id
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
@@ -69,4 +80,55 @@ resource "aws_cloudfront_distribution" "this" {
   }
 
   tags = var.tags
+}
+
+# ------------------------------------------------------------------------------
+# Route 53 CloudFront Alias Records (IPv4 & IPv6)
+# ------------------------------------------------------------------------------
+resource "aws_route53_record" "apex_a" {
+  zone_id = var.route53_zone_id
+  name    = var.domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "apex_aaaa" {
+  zone_id = var.route53_zone_id
+  name    = var.domain_name
+  type    = "AAAA"
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_a" {
+  zone_id = var.route53_zone_id
+  name    = "www.${var.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www_aaaa" {
+  zone_id = var.route53_zone_id
+  name    = "www.${var.domain_name}"
+  type    = "AAAA"
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
 }

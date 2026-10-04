@@ -3,6 +3,11 @@ variable "domain_name" {
   type        = string
 }
 
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID for creating CloudFront DNS alias records"
+  type        = string
+}
+
 variable "s3_bucket_id" {
   description = "Name/ID of the S3 bucket origin"
   type        = string

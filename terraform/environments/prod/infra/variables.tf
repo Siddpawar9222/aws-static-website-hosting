@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "Primary AWS region for regional resources"
   type        = string
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 variable "environment" {
@@ -17,7 +17,7 @@ variable "project_name" {
 }
 
 variable "domain_name" {
-  description = "Apex domain name registered in BigRock (e.g. example.com)"
+  description = "Apex domain name registered in Bigrock (e.g. example.com)"
   type        = string
 }
 
@@ -38,7 +38,7 @@ variable "github_branch" {
 }
 
 variable "create_oidc_provider" {
-  description = "Set to true if AWS IAM GitHub OIDC provider does not already exist in this AWS account"
+  description = "Set to false if the GitHub OIDC provider already exists in this AWS account"
   type        = bool
   default     = true
 }
@@ -48,3 +48,4 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+

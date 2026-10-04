@@ -1,13 +1,3 @@
-output "route53_nameservers" {
-  description = "The 4 Route 53 Name Servers that MUST be entered in BigRock DNS settings"
-  value       = module.route53.name_servers
-}
-
-output "route53_zone_id" {
-  description = "The Route 53 Hosted Zone ID"
-  value       = module.route53.zone_id
-}
-
 output "s3_bucket_name" {
   description = "Name of the S3 bucket where React static build files should be uploaded"
   value       = module.s3.bucket_id
@@ -47,3 +37,4 @@ output "website_url_www" {
   description = "Public URL (www subdomain) of the deployed React application"
   value       = "https://www.${var.domain_name}"
 }
+
