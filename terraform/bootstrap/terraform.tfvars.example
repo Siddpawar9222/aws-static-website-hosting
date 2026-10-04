@@ -1,5 +1,4 @@
 aws_region        = "us-east-1"
 project_name      = "react-aws-devops"
 state_bucket_name = "my-unique-tfstate-bucket-name-12345"
-lock_table_name   = "terraform-state-locks"
 

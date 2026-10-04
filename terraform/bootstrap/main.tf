@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# S3 Bucket for Terraform Remote State
+# S3 Bucket for Terraform Remote State & Native S3 Locking (Terraform >= 1.10)
 # ------------------------------------------------------------------------------
 resource "aws_s3_bucket" "terraform_state" {
   bucket        = var.state_bucket_name
@@ -38,26 +38,4 @@ resource "aws_s3_bucket_public_access_block" "terraform_state_public_access_bloc
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}
-
-# ------------------------------------------------------------------------------
-# DynamoDB Table for Terraform State Locking
-# ------------------------------------------------------------------------------
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = var.lock_table_name
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
