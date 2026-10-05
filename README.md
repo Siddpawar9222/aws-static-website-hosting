@@ -148,16 +148,22 @@ name_servers = [
 1. Log in to **BigRock** ➔ **Manage Orders** ➔ Click on your domain (`geekysiddhesh.shop`).
 2. Go to **Name Servers** settings.
 3. Replace the default BigRock nameservers with the **4 AWS Route 53 NameServers** from the output above.
-4. Save and wait **15–30 minutes** for DNS propagation.
+4. Save the changes.
 
 ![BigRock NameServers Configuration](screenshots/bigrock-nameservers.png)
 
-#### Verify Propagation:
-Run this command from your terminal to verify:
+#### Verify DNS Propagation:
+Run this command from your terminal to query Google's public DNS resolver directly (bypassing your local network's DNS cache):
+
 ```bash
 dig NS geekysiddhesh.shop +short @8.8.8.8
 ```
-When you see your AWS nameservers returned, proceed to Step 2.
+
+> [!NOTE]
+> **Propagation Timing:**  
+> Nameserver updates in BigRock typically take **30 minutes to 1 hour** to propagate worldwide. You can also check real-time global propagation via [DNSChecker.org](https://dnschecker.org/#NS/geekysiddhesh.shop).
+
+Once your 4 AWS nameservers are returned in the terminal, proceed to **Step 2**.
 
 ---
 
