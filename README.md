@@ -4,10 +4,12 @@ A fully automated, production-grade cloud infrastructure for hosting a Single Pa
 
 ---
 
-## 🌐 Live Website
+## 🌐 Website Demo
 
-- **Production URL:** [https://geekysiddhesh.shop](https://geekysiddhesh.shop)
-- **Subdomain:** [https://www.geekysiddhesh.shop](https://www.geekysiddhesh.shop)
+> **Note:** The AWS infrastructure for this project has been torn down after successful completion to avoid ongoing costs. The screenshots below were captured while the site was live and fully operational.
+
+- **Domain used:** `geekysiddhesh.shop`
+- **Subdomain:** `www.geekysiddhesh.shop`
 
 ![Live Website Running Tic-Tac-Toe](screenshots/live-website.png)
 
@@ -102,6 +104,7 @@ flowchart TD
 ## 📋 Prerequisites
 
 Before deploying, ensure you have:
+
 1. **[AWS Account](https://aws.amazon.com/)** with admin privileges configured locally (`aws configure`).
 2. **[Terraform CLI](https://developer.hashicorp.com/terraform/downloads)** (>= 1.10 recommended).
 3. **Domain Name** registered at a registrar (e.g. BigRock, Namecheap, GoDaddy).
@@ -134,6 +137,7 @@ terraform apply
 ```
 
 After `terraform apply` finishes, you will see output like:
+
 ```text
 Outputs:
 name_servers = [
@@ -145,6 +149,7 @@ name_servers = [
 ```
 
 #### Update BigRock DNS:
+
 1. Log in to **BigRock** ➔ **Manage Orders** ➔ Click on your domain (`geekysiddhesh.shop`).
 2. Go to **Name Servers** settings.
 3. Replace the default BigRock nameservers with the **4 AWS Route 53 NameServers** from the output above.
@@ -153,6 +158,7 @@ name_servers = [
 ![BigRock NameServers Configuration](screenshots/bigrock-nameservers.png)
 
 #### Verify DNS Propagation:
+
 Run this command from your terminal to query Google's public DNS resolver directly (bypassing your local network's DNS cache):
 
 ```bash
@@ -160,7 +166,7 @@ dig NS geekysiddhesh.shop +short @8.8.8.8
 ```
 
 > [!NOTE]
-> **Propagation Timing:**  
+> **Propagation Timing:**
 > Nameserver updates in BigRock typically take **30 minutes to 1 hour** to propagate worldwide. You can also check real-time global propagation via [DNSChecker.org](https://dnschecker.org/#NS/geekysiddhesh.shop).
 
 Once your 4 AWS nameservers are returned in the terminal, proceed to **Step 2**.
@@ -184,30 +190,35 @@ Since BigRock is already delegated to Route 53, the ACM DNS validation records a
 ### Step 3: Configure GitHub Actions CI/CD
 
 #### 1. Retrieve Terraform Outputs
+
 From your `terraform/environments/prod/infra` directory, run:
+
 ```bash
 terraform output
 ```
 
 Note down these values:
+
 - `github_actions_role_arn`
 - `s3_bucket_name`
 - `cloudfront_distribution_id`
 
 #### 2. Add GitHub Repository Secrets
-Go to your GitHub repository:  
+
+Go to your GitHub repository:
 **Settings ➔ Secrets and variables ➔ Actions ➔ New repository secret**
 
 Add the following 4 secrets:
 
-| Secret Name | Example Value | Description |
-| :--- | :--- | :--- |
-| `AWS_ROLE_ARN` | `arn:aws:iam::123456789012:role/github-actions-frontend-deploy` | IAM role assumed via OIDC |
-| `AWS_REGION` | `ap-south-1` | Primary AWS region |
-| `S3_BUCKET` | `geekysiddhesh-shop-prod-site` | Target S3 bucket name |
-| `CF_DISTRIBUTION_ID` | `E2EOYX5QIGJI4E` | CloudFront Distribution ID for cache invalidation |
+| Secret Name            | Example Value                                                     | Description                                       |
+| :--------------------- | :---------------------------------------------------------------- | :------------------------------------------------ |
+| `AWS_ROLE_ARN`       | `arn:aws:iam::123456789012:role/github-actions-frontend-deploy` | IAM role assumed via OIDC                         |
+| `AWS_REGION`         | `ap-south-1`                                                    | Primary AWS region                                |
+| `S3_BUCKET`          | `geekysiddhesh-shop-prod-site`                                  | Target S3 bucket name                             |
+| `CF_DISTRIBUTION_ID` | `E2EOYX5QIGJI4E`                                                | CloudFront Distribution ID for cache invalidation |
 
 #### 3. GitHub Actions Workflow File
+
 In your React project repository (`tic-tac-toe-s3`), create `.github/workflows/deploy.yml`:
 
 ```yaml
@@ -275,6 +286,7 @@ Push any commit to your `master` branch. GitHub Actions will automatically authe
 ## 🔍 Verification & AWS Console Gallery
 
 ### 1. Terminal Health Checks
+
 Once deployed, run these quick checks from your terminal:
 
 ```bash
@@ -289,6 +301,7 @@ curl -I https://geekysiddhesh.shop
 ```
 
 Expected headers include:
+
 - `HTTP/2 200`
 - `Server: CloudFront`
 - `x-cache: Hit from cloudfront` (on repeat visits)
@@ -298,18 +311,22 @@ Expected headers include:
 ### 2. AWS Management Console Verification
 
 #### 🪣 Amazon S3: Remote State & Static Website Buckets
+
 The `react-tfstate-siddhesh-9821` bucket manages Terraform remote state, while `geekysiddhesh-shop-prod-site` houses the static React files. All public access is blocked; content is accessible only through CloudFront OAC.
 ![Amazon S3 Buckets](screenshots/aws-s3-buckets.png)
 
 #### ⚡ Amazon CloudFront: Global CDN Distribution
+
 Active CloudFront distribution (`E2EOYX5QIGJI4E`) with alternate domain name (`www.geekysiddhesh.shop`), SSL termination, and SPA custom error page rewriting (`/index.html`).
 ![Amazon CloudFront Distribution](screenshots/aws-cloudfront-distribution.png)
 
 #### 📍 Amazon Route 53: Hosted Zone & DNS Records
+
 Public hosted zone for `geekysiddhesh.shop` containing 8 records including IPv4 (`A`) and IPv6 (`AAAA`) aliases targeting CloudFront, plus NS and SOA records.
 ![Amazon Route 53 Hosted Zone](screenshots/aws-route53-hostedzone.png)
 
 #### 🔒 AWS Certificate Manager (ACM): SSL/TLS Certificate
+
 Public SSL/TLS certificate issued for `geekysiddhesh.shop` in `us-east-1` with DNS validation verified and in active use by CloudFront.
 ![AWS ACM Certificate](screenshots/aws-acm-certificate.png)
 
@@ -337,6 +354,6 @@ terraform destroy
 
 ## 📚 Deep Dive: Learn the Architecture
 
-Want to understand **why** we chose these services and **how** they work under the hood?  
-Read the beginner-friendly companion guide:  
+Want to understand **why** we chose these services and **how** they work under the hood?
+Read the beginner-friendly companion guide:
 👉 **[CONCEPTS.md](CONCEPTS.md)**
